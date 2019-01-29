@@ -13,26 +13,26 @@ uv10 = xr.DataArray(np.zeros((XTIME.size,2,2)), \
                     dims=('Time','south_north','west_east'),     \
                     coords={'XTIME':XTIME,'XLONG':XLONG,'XLAT':XLAT})
 
-uv10[0:3,0,0] = [15,16,17]
-uv10[0:3,0,1] = [16,17,18]
-uv10[0:3,1,0] = [1,2,3]
-uv10[0:3,1,1] = [2,3,4]
+uv10[0:11,0,0] = range(15,26)
+uv10[0:11,0,1] = range(16,27)
+uv10[0:11,1,0] = range(1,12)
+uv10[0:11,1,1] = range(2,13)
 def test_average_wind_multi():
-    ave_w = mc.average_wind(5,180,uv10[0:3,:,:],True)
-    assert(ave_w[0,0].values == 16)
-    assert(ave_w[1,1].values == 3)
+    ave_w = mc.average_wind(uv10,6,3*60,2)
+    assert(ave_w[2,0,0].values == 16)
+    assert(ave_w[2,1,0].values == 2)
 
 def test_average_wind_nomulti():
     print(XTIME.values)
-    ave_w = mc.average_wind(5,180,uv10[0:3,:,:],False)
-    ave1 = (uv10[0,0,0]+uv10[1,0,0]+2/3*uv10[2,0,0])/3
-    np.testing.assert_almost_equal(ave_w[0,0].values, ave1)
+    ave_w = mc.average_wind(uv10,5,3*60,2)
+    ave1 = (uv10[0,0,0]+uv10[1,0,0]*2/3)/3
+    np.testing.assert_almost_equal(ave_w[2,0,0].values, ave1)
 
 def test_time_extra_0():
-    trem = mc.time_remainder(uv10[0:4,:,:],9)
+    trem = mc.time_extra(uv10[0:3,:,:],6)
     assert(trem == 0)
 
 def test_time_extra_x():
     '''Need some time from the last timestep'''
-    trem = mc.time_extra(uv10[0:4,:,:],8)
+    trem = mc.time_extra(uv10[0:3,:,:],5)
     assert(trem == 60.0)
