@@ -1,4 +1,3 @@
-
 import xarray as xr
 import numpy as np 
 import wrf
@@ -6,30 +5,29 @@ import netCDF4 as nc
 import time
 import sys
 
-def time_remainder(uv10,diag):
+def time_extra(uv10,diag):
     '''Calculate how much of the last time step is needed to cover the diag period'''
     trem = ((uv10.XTIME[-1]-uv10.XTIME[0])-np.timedelta64(diag,'m'))/np.timedelta64(1,'s')
     trem = conv_to_int(trem)
     return trem
 
-def average_wind(diag, dt, uv10,multi):
+def average_wind(uv10, diag, dt, within_period):
     '''Calculate the wind speed average over the period needed'''
+    ''' From Stackoverflow, first answer: https://stackoverflow.com/questions/48510784/xarray-rolling-mean-with-weights'''
+    # Time extra:
+    trem = time_extra(uv10, diag)
+    # Get a weights array
+    #weights = xr.DataArray(np.ones(uv10.sizes['Time']), dims=['window'])
+    weights = xr.DataArray(np.ones(within_period), dims=['window'])
+    print(weights)
+    print("======")
+    weights[-1] = (dt-trem)/dt
 
-    ntime=uv10.sizes['Time']
-    print("Number of time steps for average: {}".format(ntime))
-    print("Multiple of timestep?: {}".format(multi))
-    # 2 cases: the diagnostic period is a multiple of the time step or not
-    if (multi):
-        ave = uv10.mean(dim='Time')
-    else:
-        # Sum first ntime-1 timesteps
-        ave = uv10.isel(Time=slice(0,ntime-1)).sum(dim='Time')
-        # Time remainder:
-        trem = time_remainder(uv10, diag)
-        # Add fraction of the last time step
-        ave = ave + uv10[-1,:,:]*(dt-trem)/dt
-        # Divide by number of timesteps
-        ave = ave/ntime
+    # Need to change weights array. Need the fraction at the end of all the windows... 
+    ave = uv10.rolling(Time=within_period, center=True).construct('window').dot(weights)
+    print(ave)
+    print("======")
+
     return ave
 
 def conv_to_int(var):
@@ -81,6 +79,8 @@ def main():
     filename="/short/w35/ccc561/WRF/run_nu-wrf_v8/tests_CCRC_diag/coupled_run/wrfout_d01_1999-06-01_00:00:00"
     ds = getWRF_output(filename)
 
+    uv10 = ds.uv10
+    print(uv10)
     # Loop through the diagnostics: 5min, 10min, 20min, 30min, 60min
     for diag in [5]:#,10,20,30,60]:
 
@@ -100,15 +100,13 @@ def main():
         print(multi)
 
         # Function that calculates the average wind for this window.
-        ave_w = average_wind(diag,dt,uv10[0:within_period,:,:],multi)
+        ave_w = average_wind(uv10,diag=diag,dt=dt,within_period=within_period)
         # Use rolling() to apply the function to the correct data
 
-
         # Calculate the daily max of this average (groupby(day))
-
 if __name__ == "__main__":
-#    main()
-    filename = "/short/w35/ccc561/WRF/run_nu-wrf_v8/tests_CCRC_diag/coupled_run/wrfout_d01_1999-06-01_00:00:00"
-    ds = getWRF_output(filename)
-    uv10 = ds['uv10']
-    ave_w = average_wind(5,180,uv10[0:3,:,:],False)
+    main()
+#    filename = "/short/w35/ccc561/WRF/run_nu-wrf_v8/tests_CCRC_diag/coupled_run/wrfout_d01_1999-06-01_00:00:00"
+#    ds = getWRF_output(filename)
+#    uv10 = ds['uv10']
+#    ave_w = average_wind(5,180,uv10[0:3,:,:],True)
