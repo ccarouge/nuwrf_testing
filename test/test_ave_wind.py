@@ -17,22 +17,34 @@ uv10[0:11,0,0] = range(15,26)
 uv10[0:11,0,1] = range(16,27)
 uv10[0:11,1,0] = range(1,12)
 uv10[0:11,1,1] = range(2,13)
+uv10 = uv10*3*60
 def test_average_wind_multi():
-    ave_w = mc.average_wind(uv10,6,3*60,2)
-    assert(ave_w[2,0,0].values == 16)
-    assert(ave_w[2,1,0].values == 2)
+    within_period = 3
+    ave_w = mc.average_wind(uv10,6,3*60,within_period)
+    np.testing.assert_almost_equal(ave_w[within_period-2,0,0].values, 15.5)
+    np.testing.assert_almost_equal(ave_w[within_period-2,1,0].values, 1.5)
 
 def test_average_wind_nomulti():
-    print(XTIME.values)
-    ave_w = mc.average_wind(uv10,5,3*60,2)
-    ave1 = (uv10[0,0,0]+uv10[1,0,0]*2/3)/3
-    np.testing.assert_almost_equal(ave_w[2,0,0].values, ave1)
+    within_period = 3    
+    ave_w = mc.average_wind(uv10,5,3*60,within_period)
+    ave1 = (uv10[0,0,0]+uv10[1,0,0]*2/3)/(5*60)
+    np.testing.assert_almost_equal(ave_w[within_period-2,0,0].values, ave1)
 
 def test_time_extra_0():
-    trem = mc.time_extra(uv10[0:3,:,:],6)
+    trem = mc.time_extra(uv10[0:3,:,:],3*60.,6)
     assert(trem == 0)
 
 def test_time_extra_x():
     '''Need some time from the last timestep'''
-    trem = mc.time_extra(uv10[0:3,:,:],5)
+    trem = mc.time_extra(uv10[0:3,:,:],3*60.,5)
     assert(trem == 60.0)
+
+def test_ntimestep():
+    ds = uv10.to_dataset(name="Fake")
+    wp = mc.ntimestep_in_diag(ds,5)
+    assert(wp == 3)
+
+def test_ntimestep_0():
+    ds = uv10.to_dataset(name="Fake")
+    wp = mc.ntimestep_in_diag(ds,9)
+    assert(wp == 4)
