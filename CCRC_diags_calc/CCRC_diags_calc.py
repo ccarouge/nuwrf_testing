@@ -83,22 +83,24 @@ def get_windspeed10(ds):
 def getWRF_output(filename):
     '''Read in WRF output file and add wind speed to the dataset'''
 
-    ds = xr.open_dataset(filename,chunks={'south_north':1,'west_east':1})
-#    ds = xr.open_dataset(filename)
+#    ds = xr.open_dataset(filename,chunks={'south_north':1,'west_east':1})
+    ds = xr.open_dataset(filename)
     ds['uv10'] = get_windspeed10(ds)
  
     return ds
 
 def main():
     # Read in data and calculate wind speed
-    filename="/short/w35/ccc561/WRF/run_nu-wrf_v8/tests_CCRC_diag/coupled_run/wrfout_d01_1999-06-01_00:00:00"
+    print("Reading in the data from WRF")
+    filename="/g/data/w35/ccc561/nuwrf_testing/wrfout_subset.nc"
     ds = getWRF_output(filename)
     uv10 = ds.uv10
     print(uv10)
 
     # Read in wrfdly
-    filename="/short/w35/ccc561/WRF/run_nu-wrf_v8/tests_CCRC_diag/coupled_run/wrfdly_d01_1999-06-01_00:00:00"
-    dl = xr.open_dataset(filename, chunks={'south_north':1,'west_east':1})
+    filename="/g/data/w35/ccc561/nuwrf_testing/wrfdly_d01_1999-06-01_00:00:00"
+#    dl = xr.open_dataset(filename, chunks={'south_north':1,'west_east':1})
+    dl = xr.open_dataset(filename)
 
     # Calculate how many time steps per window should be used
     # by comparing the output time step and the length of the diagnostic window
@@ -108,8 +110,10 @@ def main():
     uv10 = uv10 * dt 
 
     # Loop through the diagnostics: 5min, 10min, 20min, 30min, 60min
-    for diag in [5,10,20,30,60]:
+#    for diag in [5,10,20,30,60]:
+    for diag in [5]:
 
+        print("Calculate the max. daily wind speed for {} min window".format(diag))
         # Number of timesteps to cover the length of the diagnostic window.
         within_period = ntimestep_in_diag(ds, diag)
         print(within_period)
