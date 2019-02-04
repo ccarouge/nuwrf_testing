@@ -125,15 +125,31 @@ def main():
 
         # Function that calculates the average wind for this window.
         ave_w = average_wind(uv10,diag=diag,dt=dt,within_period=within_period)
+        print("What is going on?")
+        print(ave_w[:,0,0])
 
-        # Add a diag dimension and coordinate
-        print(ave_w)
-        ave_w['diag'] = diag
-        print(ave_w)
-        tt = ave_w.expand_dims('diag')
-        print(tt)
+        # Drop the undefined values and Get the daily max.
+        ave_w = ave_w.dropna('Time')
+        ave_w.coords['XTIME'] = ave_w.coords['XTIME'] - np.timedelta64(int(dt),'s')
+        ave_w = ave_w.groupby('XTIME.dayofyear').max(dim='Time')
 
-        # Compare with output from WRF
+        # Get coordinate in date
+        date_diag=(np.asarray(['1999','1999'], dtype='datetime64[Y]'))+(np.asarray(ave_w['dayofyear'], dtype='timedelta64[D]')-1)
+
+        # Need to specify which dimension to use for the new coordinates as time doesn't
+        # exist in the original DataArray
+        ave_w.coords['date'] = (['dayofyear'], date_diag)
+        ave_w = ave_w.rename({'dayofyear':'time'})
+        ave_w['dayofyear'] = ave_w.coords['time']
+        ave_w = ave_w.drop('time')
+        ave_w.set_index({'time':'date'},inplace=True)
+
+#        # Compare with daily max from WRF
+        print("ave_w")
+        print(ave_w)
+
+        print("dl.UV10MAX5")
+        print(dl.Times)
         # Calculate the daily max of this average (groupby(day))
 if __name__ == "__main__":
     main()
@@ -141,3 +157,5 @@ if __name__ == "__main__":
 #    ds = getWRF_output(filename)
 #    uv10 = ds['uv10']
 #    ave_w = average_wind(5,180,uv10[0:3,:,:],True)
+
+# array([      nan, 15.236684, 15.162975, ..., 13.162424, 13.215631, 13.269934])
